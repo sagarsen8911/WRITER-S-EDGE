@@ -168,9 +168,8 @@
 </head>
 <body>
   <div class="theme-toggle">
-    <label>
+    <label for="darkModeToggle">Dark Mode
       <input type="checkbox" id="darkModeToggle" />
-      Dark Mode
     </label>
   </div>
 
@@ -180,8 +179,9 @@
         ✍️ <span>Writer's Assistant</span>
         <button id="toggleSidebar">☰</button>
       </div>
+      <label for="newProjectTitle">New Project</label>
       <input type="text" id="newProjectTitle" placeholder="Enter project title" />
-      <button onclick="addProject()">+ Add Project</button>
+      <button id="addProjectBtn">+ Add Project</button>
       <nav>
         <h3>Projects</h3>
         <ul id="projectList"></ul>
@@ -200,12 +200,13 @@
         <div class="icons">🔔 👤</div>
       </header>
       <section class="editor">
+        <label for="chapterTitleInput">Chapter Title</label>
         <input type="text" id="chapterTitleInput" placeholder="Edit Chapter Title" />
-        <button onclick="saveChapterTitle()">Save Title</button>
+        <button id="saveTitleBtn">Save Title</button>
         <h2 id="chapterTitle">Chapter Title</h2>
         <textarea id="editorText" placeholder="Start writing here..."></textarea>
         <div id="wordCount">Words: 0 | Characters: 0</div>
-        <button onclick="exportText()">Export as .txt</button>
+        <button id="exportBtn">Export as .txt</button>
       </section>
     </main>
 
@@ -213,8 +214,9 @@
       <div class="characters">
         <h3>Characters</h3>
         <ul id="characterList"></ul>
+        <label for="newCharacter">Character Name</label>
         <input type="text" id="newCharacter" placeholder="Add character" />
-        <button onclick="addCharacter()">Add</button>
+        <button id="addCharacterBtn">Add</button>
       </div>
       <div class="progress">
         <h3>Progress</h3>
@@ -223,26 +225,38 @@
       <div class="pomodoro">
         <h3>Pomodoro Timer</h3>
         <span id="timerDisplay">25:00</span><br />
-        <button onclick="startTimer()">Start</button>
-        <button onclick="resetTimer()">Reset</button>
+        <button id="startTimerBtn">Start</button>
+        <button id="resetTimerBtn">Reset</button>
       </div>
     </aside>
   </div>
 
   <script>
-    const toggleSidebar = document.getElementById('toggleSidebar');
+    const toggleSidebarBtn = document.getElementById('toggleSidebar');
     const sidebar = document.getElementById('sidebar');
-    toggleSidebar.onclick = () => sidebar.classList.toggle('collapsed');
+    toggleSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+    });
 
     const darkToggle = document.getElementById('darkModeToggle');
     const body = document.body;
-    darkToggle.onchange = () => body.classList.toggle('dark');
+    darkToggle.addEventListener('change', () => {
+      body.classList.toggle('dark');
+      localStorage.setItem('darkMode', body.classList.contains('dark'));
+    });
 
     const editor = document.getElementById("editorText");
-    editor.oninput = function () {
+    editor.addEventListener('input', function () {
       localStorage.setItem("writingContent", this.value);
       updateWordCount(this.value);
-    };
+    });
+
+    document.getElementById('addProjectBtn').addEventListener('click', addProject);
+    document.getElementById('saveTitleBtn').addEventListener('click', saveChapterTitle);
+    document.getElementById('exportBtn').addEventListener('click', exportText);
+    document.getElementById('addCharacterBtn').addEventListener('click', addCharacter);
+    document.getElementById('startTimerBtn').addEventListener('click', startTimer);
+    document.getElementById('resetTimerBtn').addEventListener('click', resetTimer);
 
     function updateWordCount(text) {
       const words = text.trim().split(/\s+/).filter(w => w).length;
@@ -274,6 +288,7 @@
         saved.push(title);
         localStorage.setItem("projectList", JSON.stringify(saved));
         input.value = "";
+        saveProjectOrder();
       }
     }
 
@@ -307,6 +322,7 @@
         const temp = dragSrcEl.innerHTML;
         dragSrcEl.innerHTML = e.target.innerHTML;
         e.target.innerHTML = temp;
+        saveProjectOrder();
       }
     });
 
@@ -315,6 +331,11 @@
         e.target.classList.remove("dragging");
       }
     });
+
+    function saveProjectOrder() {
+      const titles = Array.from(projectList.children).map(li => li.textContent);
+      localStorage.setItem("projectList", JSON.stringify(titles));
+    }
 
     function saveChapterTitle() {
       const input = document.getElementById("chapterTitleInput");
@@ -329,9 +350,11 @@
       const text = document.getElementById("editorText").value;
       const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      a.href = url;
       a.download = "writing.txt";
       a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
     }
 
     let time = 25 * 60;
@@ -366,6 +389,11 @@
       document.getElementById("editorText").value = localStorage.getItem("writingContent") || "";
       document.getElementById("chapterTitle").textContent = localStorage.getItem("chapterTitle") || "Chapter Title";
       updateWordCount(document.getElementById("editorText").value);
+
+      if (localStorage.getItem('darkMode') === 'true') {
+        body.classList.add('dark');
+        darkToggle.checked = true;
+      }
 
       const savedChars = JSON.parse(localStorage.getItem("characterList") || "[]");
       savedChars.forEach(name => {
