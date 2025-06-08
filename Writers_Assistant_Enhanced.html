@@ -1,0 +1,387 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Writer's Assistant Enhanced</title>
+  <style>
+:root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --panel-color: #f2f2f2;
+    --accent-color: #6c63ff;
+    --input-bg: #fff;
+  }
+  
+  body.dark {
+    --bg-color: #1e1e1e;
+    --text-color: #ffffff;
+    --panel-color: #2c2c2c;
+    --input-bg: #333;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+  
+  .theme-toggle {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    z-index: 10;
+  }
+  
+  .container {
+    display: grid;
+    grid-template-columns: 250px 1fr 250px;
+    width: 100%;
+    height: 100vh;
+  }
+  
+  .sidebar {
+    background-color: var(--panel-color);
+    padding: 20px;
+    transition: width 0.3s;
+    overflow: hidden;
+  }
+  
+  .sidebar.collapsed {
+    width: 60px;
+  }
+  
+  .sidebar .logo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .new-project {
+    width: 100%;
+    margin: 15px 0;
+    padding: 10px;
+    background-color: var(--accent-color);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .sidebar h3 {
+    margin-top: 20px;
+    font-size: 14px;
+  }
+  
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+    font-size: 14px;
+  }
+  
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-color);
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .header input {
+    padding: 8px;
+    width: 70%;
+    background-color: var(--input-bg);
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    color: var(--text-color);
+  }
+  
+  .editor {
+    flex-grow: 1;
+    padding: 20px;
+  }
+  
+  .editor textarea {
+    width: 100%;
+    height: 70%;
+    padding: 10px;
+    font-size: 16px;
+    resize: none;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .right-panel {
+    background-color: var(--panel-color);
+    padding: 20px;
+    border-left: 1px solid #ccc;
+  }
+  
+  .right-panel h3 {
+    margin-bottom: 10px;
+  }
+  
+  .right-panel ul {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .right-panel input {
+    width: 100%;
+    margin: 10px 0;
+    padding: 8px;
+    border: 1px solid #ccc;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+  }
+  
+  .right-panel button {
+    padding: 8px;
+    width: 100%;
+    background-color: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  progress {
+    width: 100%;
+    height: 20px;
+  }
+  
+  li.dragging { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle">
+    <label>
+      <input type="checkbox" id="darkModeToggle" />
+      Dark Mode
+    </label>
+  </div>
+
+  <div class="container">
+    <aside class="sidebar" id="sidebar">
+      <div class="logo">
+        ✍️ <span>Writer's Assistant</span>
+        <button id="toggleSidebar">☰</button>
+      </div>
+      <input type="text" id="newProjectTitle" placeholder="Enter project title" />
+      <button onclick="addProject()">+ Add Project</button>
+      <nav>
+        <h3>Projects</h3>
+        <ul id="projectList"></ul>
+        <h3>Tools</h3>
+        <ul>
+          <li>Timer</li>
+          <li>Notes</li>
+          <li>Outline</li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="header">
+        <input type="text" placeholder="Search..." />
+        <div class="icons">🔔 👤</div>
+      </header>
+      <section class="editor">
+        <input type="text" id="chapterTitleInput" placeholder="Edit Chapter Title" />
+        <button onclick="saveChapterTitle()">Save Title</button>
+        <h2 id="chapterTitle">Chapter Title</h2>
+        <textarea id="editorText" placeholder="Start writing here..."></textarea>
+        <div id="wordCount">Words: 0 | Characters: 0</div>
+        <button onclick="exportText()">Export as .txt</button>
+      </section>
+    </main>
+
+    <aside class="right-panel">
+      <div class="characters">
+        <h3>Characters</h3>
+        <ul id="characterList"></ul>
+        <input type="text" id="newCharacter" placeholder="Add character" />
+        <button onclick="addCharacter()">Add</button>
+      </div>
+      <div class="progress">
+        <h3>Progress</h3>
+        <progress value="30" max="100"></progress>
+      </div>
+      <div class="pomodoro">
+        <h3>Pomodoro Timer</h3>
+        <span id="timerDisplay">25:00</span><br />
+        <button onclick="startTimer()">Start</button>
+        <button onclick="resetTimer()">Reset</button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const toggleSidebar = document.getElementById('toggleSidebar');
+    const sidebar = document.getElementById('sidebar');
+    toggleSidebar.onclick = () => sidebar.classList.toggle('collapsed');
+
+    const darkToggle = document.getElementById('darkModeToggle');
+    const body = document.body;
+    darkToggle.onchange = () => body.classList.toggle('dark');
+
+    const editor = document.getElementById("editorText");
+    editor.oninput = function () {
+      localStorage.setItem("writingContent", this.value);
+      updateWordCount(this.value);
+    };
+
+    function updateWordCount(text) {
+      const words = text.trim().split(/\s+/).filter(w => w).length;
+      const chars = text.length;
+      document.getElementById("wordCount").textContent = `Words: ${words} | Characters: ${chars}`;
+    }
+
+    function addCharacter() {
+      const input = document.getElementById("newCharacter");
+      const name = input.value.trim();
+      if (name) {
+        const li = document.createElement("li");
+        li.textContent = name;
+        document.getElementById("characterList").appendChild(li);
+        input.value = "";
+        const saved = JSON.parse(localStorage.getItem("characterList") || "[]");
+        saved.push(name);
+        localStorage.setItem("characterList", JSON.stringify(saved));
+      }
+    }
+
+    function addProject() {
+      const input = document.getElementById("newProjectTitle");
+      const title = input.value.trim();
+      if (title !== "") {
+        const li = createProjectElement(title);
+        document.getElementById("projectList").appendChild(li);
+        const saved = JSON.parse(localStorage.getItem("projectList") || "[]");
+        saved.push(title);
+        localStorage.setItem("projectList", JSON.stringify(saved));
+        input.value = "";
+      }
+    }
+
+    function createProjectElement(title) {
+      const li = document.createElement("li");
+      li.textContent = title;
+      li.draggable = true;
+      li.onclick = () => alert(`Switching to project: ${title}`);
+      return li;
+    }
+
+    const projectList = document.getElementById("projectList");
+    let dragSrcEl = null;
+
+    projectList.addEventListener("dragstart", function (e) {
+      if (e.target.tagName === "LI") {
+        dragSrcEl = e.target;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/html", dragSrcEl.innerHTML);
+        dragSrcEl.classList.add("dragging");
+      }
+    });
+
+    projectList.addEventListener("dragover", function (e) {
+      e.preventDefault();
+    });
+
+    projectList.addEventListener("drop", function (e) {
+      e.stopPropagation();
+      if (dragSrcEl && dragSrcEl !== e.target && e.target.tagName === "LI") {
+        const temp = dragSrcEl.innerHTML;
+        dragSrcEl.innerHTML = e.target.innerHTML;
+        e.target.innerHTML = temp;
+      }
+    });
+
+    projectList.addEventListener("dragend", function (e) {
+      if (e.target.tagName === "LI") {
+        e.target.classList.remove("dragging");
+      }
+    });
+
+    function saveChapterTitle() {
+      const input = document.getElementById("chapterTitleInput");
+      const title = input.value.trim();
+      if (title) {
+        document.getElementById("chapterTitle").textContent = title;
+        localStorage.setItem("chapterTitle", title);
+      }
+    }
+
+    function exportText() {
+      const text = document.getElementById("editorText").value;
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "writing.txt";
+      a.click();
+    }
+
+    let time = 25 * 60;
+    let timerInterval;
+
+    function updateTimer() {
+      const min = Math.floor(time / 60);
+      const sec = time % 60;
+      document.getElementById("timerDisplay").textContent = `${min}:${sec < 10 ? "0" + sec : sec}`;
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (time > 0) {
+          time--;
+          updateTimer();
+        } else {
+          clearInterval(timerInterval);
+          alert("Pomodoro session complete!");
+        }
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      time = 25 * 60;
+      updateTimer();
+    }
+
+    window.onload = function () {
+      document.getElementById("editorText").value = localStorage.getItem("writingContent") || "";
+      document.getElementById("chapterTitle").textContent = localStorage.getItem("chapterTitle") || "Chapter Title";
+      updateWordCount(document.getElementById("editorText").value);
+
+      const savedChars = JSON.parse(localStorage.getItem("characterList") || "[]");
+      savedChars.forEach(name => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        document.getElementById("characterList").appendChild(li);
+      });
+
+      const savedProjects = JSON.parse(localStorage.getItem("projectList") || "[]");
+      savedProjects.forEach(title => {
+        const li = createProjectElement(title);
+        document.getElementById("projectList").appendChild(li);
+      });
+
+      updateTimer();
+    };
+  </script>
+</body>
+</html>
